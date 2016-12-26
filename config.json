@@ -1,0 +1,9 @@
+{
+	"cronInterval": "*/1 * * * *",
+	"port": "3000",
+	"domain": "oubs.fi",
+	"calendarName": "oubs-studio",
+	"baseUrl": "https://tila.ayy.fi/resource/",
+	"resource": "studio",
+	"days": "100"
+}
