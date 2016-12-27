@@ -1,11 +1,10 @@
-#!/usr/bin/env node
-
+"use strict";
 const jsdom = require("jsdom");
 const moment = require("moment");
 const fs = require('fs');
 const schedule = require('node-schedule');
-const ical = require('ical-generator')
-const http = require('http')
+const ical = require('ical-generator');
+const http = require('http');
 
 // Read config file
 let config;
@@ -13,11 +12,11 @@ fs.readFile('config.json', 'utf8', (err, data) => {
   if(err) throw err;
   config = JSON.parse(data);
   startServer(config)
-})
+});
 
 
 function startServer(config) {
-  cal = ical({domain: config.domain, name: config.calendarName});
+  const cal = ical({domain: config.domain, name: config.calendarName});
 
   // overwrite domain
   cal.domain(config.domain);
@@ -29,7 +28,7 @@ function startServer(config) {
   });
 
 
-  const j = schedule.scheduleJob(config.cronInterval, () => {
+  schedule.scheduleJob(config.cronInterval, () => {
     // Set up query urls
     const today = moment().format('DDMMYYYY');
     const end = moment().add(config.days, 'days').format('DDMMYYYY');
@@ -72,8 +71,6 @@ function getReservations(queryUrl) {
 
 function parseReservations(header, data) {
   let reservations = [];
-  console.log('header ', header);
-  console.log('data ', data);
   for(var d = 1; d < data.length; d++) {      // Start from index 1 to skip "confirmed/unconfirmed reservation" cell
     if (data[d].length > 0) {
       const reservation = data[d].split(" ");
@@ -109,7 +106,6 @@ function createEvents(cal, reservations, resource, queryUrl) {
  
   reservations.forEach((reservation) => {
     if (!eventsOnCalendar.includes(reservation.reserver)) {
-      console.log('add evt');
       cal.createEvent({
         start: reservation.timeStart,
         end: reservation.timeEnd,
