@@ -23,7 +23,7 @@ function startServer(config) {
 
   http.createServer(function(req, res) {
     cal.serve(res);
-  }).listen(config.port, '127.0.0.1', function() {
+  }).listen(config.port, config.domain, function() {
     console.log('Server running at ', config.domain + ':' + config.port);
   });
 
