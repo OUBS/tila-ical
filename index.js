@@ -5,6 +5,8 @@ const fs = require('fs');
 const schedule = require('node-schedule');
 const ical = require('ical-generator');
 const http = require('http');
+const Slack = require('slack-node');
+
 
 // Read config file
 let config;
@@ -35,9 +37,10 @@ function startServer(config) {
     const queryUrl = config.baseUrl + config.resource + "/" + today + "-" + end + "/";
     getReservations(queryUrl)
       .then(data => {
-        var reservations = parseReservations(data.header, data.data);
-        
-        createEvents(cal, reservations, config.resource, queryUrl);
+        const reservations = parseReservations(data.header, data.data);
+
+        const newEvents = createEvents(cal, reservations, config.resource, queryUrl);
+        if (config.webhookUrl) sendWebHooks(config.webhookUrl, newEvents, queryUrl);
       })
     });
 }
@@ -63,7 +66,7 @@ function getReservations(queryUrl) {
           });
         });
 
-        resolve({header, data});  
+        resolve({header, data});
       }
     });
   });
@@ -78,7 +81,7 @@ function parseReservations(header, data) {
       if (reservation.length > 1) {
         const times = reservation[1].split("-");
         reservationStart = times[0].length > 0 ? times[0] : '00:00';
-        reservationEnd = times[1].length > 0 ? times[1] : '23:59';          
+        reservationEnd = times[1].length > 0 ? times[1] : '23:59';
       } else {
         reservationStart = '00:00';
         reservationEnd = '23:59';
@@ -100,20 +103,40 @@ function parseReservations(header, data) {
   return reservations;
 }
 
+function sendWebHooks(url, events, link) {
+  const slack = new Slack();
+  slack.setWebhook(url);
+  if (events && events.length < 3 ) {   // To prevent flooding on restart
+    events.forEach((event) => {
+      slack.webhook({
+        channel: "#studio",
+        username: "OUBS-studiovaraukset",
+        text: event.summary + ' varasi juuri studion ' + moment(event.start).calendar() + '-' + moment(event.end).calendar() + '\n' + link
+      },(err, resp) => {
+        return;
+      });
+    })
+  }
+
+}
+
 function createEvents(cal, reservations, resource, queryUrl) {
   const calEvents = cal.events();
   const eventsOnCalendar = calEvents.map((event) => {return event.summary()});
- 
+  let newEvents = [];
   reservations.forEach((reservation) => {
     if (!eventsOnCalendar.includes(reservation.reserver)) {
-      cal.createEvent({
+      const newEvent = {
         start: reservation.timeStart,
         end: reservation.timeEnd,
         summary: reservation.reserver,
         description: '',
         location: resource,
         url: 'queryUrl'
-      });
+      }
+      newEvents.push(newEvent);
+      cal.createEvent(newEvent);
     }
   })
+  return newEvents;
 }

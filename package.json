@@ -6,7 +6,8 @@
     "ical-generator": "^0.2.9",
     "jsdom": "latest",
     "moment": "latest",
-    "node-schedule": "^1.2.0"
+    "node-schedule": "^1.2.0",
+    "slack-node": "^0.1.8"
   },
   "engine": "node >= 4.2.6"
 }
