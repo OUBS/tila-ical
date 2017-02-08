@@ -3,7 +3,12 @@
 	"port": "3000",
 	"domain": "localhost",
 	"calendarName": "oubs-studio",
-	"baseUrl": "https://tila.ayy.fi/resource/",
-	"resource": "studio",
-	"days": "100"
+	"baseUrl": "https://tila.ayy.fi/calendar/",
+	"resource": "31",
+	"days": "100",
+	"slack" : {
+		"webhookUrl": "",
+		"username": "",
+		"channel": ""
+	}
 }

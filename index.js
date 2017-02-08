@@ -16,6 +16,8 @@ fs.readFile('config.json', 'utf8', (err, data) => {
   startServer(config)
 });
 
+let queryCount = 0;
+
 
 function startServer(config) {
   const cal = ical({domain: config.domain, name: config.calendarName});
@@ -30,19 +32,22 @@ function startServer(config) {
   });
 
 
-  schedule.scheduleJob(config.cronInterval, () => {
+   schedule.scheduleJob(config.cronInterval, () => {
+    queryCount +=1;
     // Set up query urls
     const today = moment().format('DDMMYYYY');
     const end = moment().add(config.days, 'days').format('DDMMYYYY');
-    const queryUrl = config.baseUrl + config.resource + "/" + today + "-" + end + "/";
+    const queryUrl = config.baseUrl + '?r=' + config.resource + ";fd=" + today + ";ld=" + end;
+    console.log('queryCount ', queryCount);
+    console.log('new query to url ', queryUrl);
     getReservations(queryUrl)
       .then(data => {
         const reservations = parseReservations(data.header, data.data);
 
         const newEvents = createEvents(cal, reservations, config.resource, queryUrl);
-        if (config.webhookUrl) sendWebHooks(config.webhookUrl, newEvents, queryUrl);
+        if (config.slack.webhookUrl) sendWebHooks(config.slack.webhookUrl, newEvents, queryUrl);
       })
-    });
+     });
 }
 
 
@@ -76,17 +81,18 @@ function parseReservations(header, data) {
   let reservations = [];
   for(var d = 1; d < data.length; d++) {      // Start from index 1 to skip "confirmed/unconfirmed reservation" cell
     if (data[d].length > 0) {
-      const reservation = data[d].split(" ");
+      const reservation = data[d];
       let reservationStart, reservationEnd;
-      if (reservation.length > 1) {
-        const times = reservation[1].split("-");
+      const times = reservation.substring(reservation.length-12).split('-');
+
+      if (times.length > 1) {
         reservationStart = times[0].length > 0 ? times[0] : '00:00';
         reservationEnd = times[1].length > 0 ? times[1] : '23:59';
       } else {
         reservationStart = '00:00';
         reservationEnd = '23:59';
       }
-      const reserver = reservation[0];
+      const reserver = reservation;
       const reservationDate = header[d].substring(4, header[d].length);
       const dateStartString = reservationDate + " " + reservationStart;
       const dateEndString = reservationDate + " " + reservationEnd;
@@ -106,11 +112,12 @@ function parseReservations(header, data) {
 function sendWebHooks(url, events, link) {
   const slack = new Slack();
   slack.setWebhook(url);
-  if (events && events.length < 3 ) {   // To prevent flooding on restart
+
+  if (events && queryCount < 3 &&  events.length < 5 ) {   // To prevent flooding on restart
     events.forEach((event) => {
       slack.webhook({
-        channel: "#studio",
-        username: "OUBS-studiovaraukset",
+        channel: config.slack.channel,
+        username: config.slack.username,
         text: event.summary + ' varasi juuri studion ' + moment(event.start).calendar() + '-' + moment(event.end).calendar() + '\n' + link
       },(err, resp) => {
         return;
@@ -125,13 +132,13 @@ function createEvents(cal, reservations, resource, queryUrl) {
   const eventsOnCalendar = calEvents.map((event) => {return event.summary()});
   let newEvents = [];
   reservations.forEach((reservation) => {
-    if (!eventsOnCalendar.includes(reservation.reserver)) {
+    if (eventsOnCalendar.length === 0  || !eventsOnCalendar.includes(reservation.reserver)) {
       const newEvent = {
         start: reservation.timeStart,
         end: reservation.timeEnd,
         summary: reservation.reserver,
         description: '',
-        location: resource,
+        // location: resource,
         url: 'queryUrl'
       }
       newEvents.push(newEvent);
