@@ -45,24 +45,26 @@ const createEvents = (cal, reservations, resource, queryUrl) => {
     return event._data.id;
   });
   console.log({ eventsOnCalendar });
-  let newEvents = reservations.map(reservation => {
-    if (
-      eventsOnCalendar.length === 0 ||
-      !eventsOnCalendar.includes(reservation.reservation_id)
-    ) {
-      const newEvent = {
-        id: reservation.reservation_id,
-        start: new Date(reservation.reservation_start_time),
-        end: new Date(reservation.reservation_end_time),
-        summary: reservation.reserver_name,
-        description: "",
-        location: reservation.resource_name,
-        url: queryUrl
-      };
-      cal.createEvent(newEvent);
-      return newEvent;
-    }
-  });
+  let newEvents = reservations
+    .map(reservation => {
+      if (
+        eventsOnCalendar.length === 0 ||
+        !eventsOnCalendar.includes(reservation.reservation_id)
+      ) {
+        const newEvent = {
+          id: reservation.reservation_id,
+          start: new Date(reservation.reservation_start_time),
+          end: new Date(reservation.reservation_end_time),
+          summary: reservation.reserver_name,
+          description: "",
+          location: reservation.resource_name,
+          url: queryUrl
+        };
+        cal.createEvent(newEvent);
+        return newEvent;
+      }
+    })
+    .filter(e => e); // filter out undefined events
   return newEvents;
 };
 
